@@ -1,0 +1,43 @@
+pip install httpx python-dotenv
+# backend/app/main.py
+import httpx
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+API_KEY = os.getenv("ODDS_API_KEY")
+BASE_URL = "https://api.the-odds-api.com/v4/sports"
+
+app = FastAPI()
+
+# Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/sports")
+async def get_sports():
+    """Retrieve list of available sports."""
+    async with httpx.AsyncClient() as client:
+        response = await client.get(BASE_URL, params={"apiKey": API_KEY})
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+
+@app.get("/sports/{sport}/odds")
+async def get_sport_odds(sport: str):
+    """Retrieve odds for a specific sport."""
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            f"{BASE_URL}/{sport}/odds",
+            params={"apiKey": API_KEY, "regions": "us", "markets": "h2h,spreads"}
+        )
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
